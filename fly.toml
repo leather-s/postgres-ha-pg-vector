@@ -1,11 +1,19 @@
-app = "postgres-ha-example"
+# fly.toml file generated for bitter-hill-6001 on 2023-03-18T10:54:23-04:00
 
+app = "bitter-hill-6001"
 kill_signal = "SIGTERM"
 kill_timeout = 300
-services = []
+primary_region = "ord"
+
+[[services]]
+  internal_port = 5432 # Postgres instance
+  protocol = "tcp"
+
+[[services.ports]]
+  handlers = ["pg_tls"]
+  port = 5432
 
 [checks]
-
   [checks.pg]
     grace_period = "30s"
     interval = "15s"
@@ -14,7 +22,6 @@ services = []
     port = 5500
     timeout = "10s"
     type = "http"
-
   [checks.role]
     grace_period = "30s"
     interval = "15s"
@@ -23,7 +30,6 @@ services = []
     port = 5500
     timeout = "10s"
     type = "http"
-
   [checks.vm]
     grace_period = "1s"
     interval = "1m"

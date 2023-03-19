@@ -31,9 +31,17 @@ LABEL fly.app_role=postgres_cluster
 LABEL fly.version=${VERSION}
 LABEL fly.pg-version=${PG_VERSION}
 
+# RUN apt-get update && apt-get install --no-install-recommends -y \
+#     ca-certificates curl bash dnsutils vim-tiny procps jq haproxy \
+#     && apt autoremove -y
+
 RUN apt-get update && apt-get install --no-install-recommends -y \
     ca-certificates curl bash dnsutils vim-tiny procps jq haproxy \
+    postgresql-server-dev-$PG_MAJOR \
+    build-essential \
+    git \
     && apt autoremove -y
+
 
 RUN echo "deb https://packagecloud.io/timescale/timescaledb/debian/ $(cat /etc/os-release | grep VERSION_CODENAME | cut -d'=' -f2) main" > /etc/apt/sources.list.d/timescaledb.list \
     && curl -L https://packagecloud.io/timescale/timescaledb/gpgkey | apt-key add -
@@ -42,13 +50,22 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     postgresql-$PG_MAJOR-postgis-$POSTGIS_MAJOR \
     postgresql-$PG_MAJOR-postgis-$POSTGIS_MAJOR-scripts \
     timescaledb-2-postgresql-$PG_MAJOR \
+    # postgresql-$PG_MAJOR-pg_vector \
     && apt autoremove -y \
     && echo 'Installing wal-g' \
     && curl -L https://github.com/wal-g/wal-g/releases/download/v${WALG_VERSION}/wal-g-pg-ubuntu-18.04-amd64 > /usr/local/bin/wal-g \
     && chmod +x /usr/local/bin/wal-g
 
+RUN git clone https://github.com/pgvector/pgvector.git /pgvector_src \
+    && cd /pgvector_src \
+    && make \
+    && make install \
+    && cd .. \
+    && rm -rf /pgvector_src
+
 COPY --from=stolon /go/src/app/bin/* /usr/local/bin/
 COPY --from=postgres_exporter /postgres_exporter /usr/local/bin/
+COPY init-pgvector.sh /docker-entrypoint-initdb.d/
 
 ADD /scripts/* /fly/
 ADD /config/* /fly/
